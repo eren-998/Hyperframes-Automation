@@ -5,9 +5,94 @@ const { execSync } = require('child_process');
 const axios = require('axios');
 const FormData = require('form-data');
 
-const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
-const IG_USER_ID = process.env.IG_USER_ID;
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { tavily } = require("@tavily/core");
+
+// Update credentials with the ones provided by the user directly
+const IG_ACCESS_TOKEN = "IGAAUf9OGQo7lBZAFpnVndOZADJfdERLOFJqUnpJUlF4ZA0V0WlcxakR5dDlfSV9pNEVUNV9PdXNIYmttVFozT29OMk85SDFSZAHEzTU9wZADUzQmdfQ25VQ1BobHJYX2ZA5em9FNGNoNGlxek5sbF9QRHRnOVNpSXdqTnRsSHpzSDFycwZDZD";
+const IG_USER_ID = "35101247759489657";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
+
+// Initialize clients
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const tvly = tavily({ apiKey: TAVILY_API_KEY });
+
+async function generateHtmlWithGemini(topic) {
+  if (!GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY GitHub Secret is missing!");
+  }
+  
+  let researchData = "No research data available.";
+  if (TAVILY_API_KEY) {
+      console.log(`🔎 Researching topic: "${topic}" via Tavily API...`);
+      try {
+          const searchResult = await tvly.search(topic, {
+              searchDepth: "advanced",
+              maxResults: 3
+          });
+          researchData = searchResult.results.map(r => `Source: ${r.url}\nContent: ${r.content}`).join('\n\n');
+          console.log("✅ Research complete.");
+      } catch (err) {
+          console.error("⚠️ Tavily research failed (continuing without research):", err.message);
+      }
+  } else {
+      console.log("⚠️ TAVILY_API_KEY GitHub Secret missing. Skipping research step.");
+  }
+  
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const systemPrompt = `
+# @BigZip_Ai — HTML Video Generator Agent
+
+## ROLE
+You are an Elite AI Content Engineer and Motion Designer for the brand **@BigZip_Ai**. When given a 1–2 line topic and recent research data, you produce one complete self-contained \`.html\` file that plays as an animated slide-by-slide video.
+
+## STRICT WORKFLOW
+
+### STEP 1 — CONTENT PLAN (7-8 SLIDES)
+Slide 1: Hook — Bold claim, brand logo, eyebrow label, subtext
+Slide 2: Problem — Common mistakes
+Slide 3: Core Value 1 (Use research data)
+Slide 4: Core Value 2 (Use research data)
+Slide 5: Core Value 3
+Slide 6: Core Value 4
+Slide 7: Results
+Slide 8: CTA — Dark bg, BigZip_Ai logo, keyword to comment
+
+### STEP 2 — HYPERFRAMES & GSAP REQUIREMENTS (CRITICAL)
+Your output MUST be a valid Hyperframes template. If you fail these rules, the video will not render.
+1. The \`<meta name="viewport">\` MUST be \`width=1080, height=1920\`.
+2. You MUST include: \`<meta data-composition-id="my-video" data-width="1080" data-height="1920" />\`
+3. You MUST include GSAP: \`<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>\`
+4. The stage MUST be \`1080x1920\`.
+5. Every animating element or slide MUST have \`class="clip"\` and data attributes: \`data-start\`, \`data-duration\`, \`data-track-index\`.
+6. You MUST create a paused GSAP timeline and register it EXACTLY like this at the end of the body:
+<script>
+  var tl = gsap.timeline({ paused: true });
+  // Add your tl.to() or tl.from() animations here
+  window.__timelines = window.__timelines || {};
+  window.__timelines["my-video"] = tl;
+</script>
+7. NEVER animate \`visibility\`. Only animate opacity, transform, x, y, scale.
+8. Background should be \`#F8FAFC\` with a blue grid pattern.
+
+### OUTPUT FORMAT
+Return ONLY the complete HTML file content. No markdown formatting (do not wrap in \`\`\`html). Start with <!DOCTYPE html>.
+`;
+
+  console.log("🧠 Generating content with Gemini API...");
+  const result = await model.generateContent([
+    systemPrompt,
+    `Topic: ${topic}\n\nRecent Research Data:\n${researchData}`
+  ]);
+  
+  let html = result.response.text();
+  
+  // Clean up any markdown formatting if the model accidentally adds it
+  html = html.replace(/^\s*```html/i, '').replace(/```\s*$/i, '').trim();
+  return html;
+}
 
 async function main() {
   console.log("=== Starting Automation Pipeline ===");
@@ -20,54 +105,28 @@ async function main() {
   }
 
   const fileContent = await fs.readFile(topicsPath, 'utf8');
-  // List banayein aur khali line hata dein
   const topics = fileContent.split('\n').map(t => t.trim()).filter(t => t.length > 0);
 
   if (topics.length === 0) {
     console.log("✅ Queue khali hai. Sabhi videos post ho chuke hain. Please add new topics!");
-    return; // Exit peacefully
+    return;
   }
 
   // 2. PEHLA TOPIC UTHANA
   const currentTopic = topics[0];
   console.log(`📌 Aaj ka Topic: "${currentTopic}"`);
 
-  // 3. HTML GENERATE KARNA (Mocking Gemini API for structural safety)
-  console.log("🤖 AI se HTML generate karwa rahe hain...");
-  // In real life, use axios to call Gemini API with your system prompt & currentTopic here
-  const sampleHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1080, height=1920" />
-  <meta data-composition-id="my-video" data-width="1080" data-height="1920" />
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <style>
-    html, body { width: 1080px; height: 1920px; background: #F8FAFC; margin:0; display:flex; align-items:center; justify-content:center; }
-    #stage { width: 1080px; height: 1920px; outline: 2px solid rgba(66,133,244,0.5); position:relative; overflow:hidden;}
-    .topbar { display:flex; padding: 40px; font-size: 40px; }
-    .clip { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; }
-  </style>
-</head>
-<body>
-  <div id="stage">
-    <div id="el-title" class="clip" data-start="0" data-duration="5" data-track-index="0" style="display:flex; align-items:center; justify-content:center; flex-direction:column;">
-      <div class="topbar">
-        <span class="brand">@BigZip_Ai</span>
-      </div>
-      <h2 style="font-size: 60px;">${currentTopic}</h2>
-    </div>
-  </div>
-  <script>
-    var tl = gsap.timeline({ paused: true });
-    tl.to("#el-title", { opacity: 1, duration: 0.5 }, 0);
-    window.__timelines = window.__timelines || {};
-    window.__timelines["my-video"] = tl;
-  </script>
-</body>
-</html>`;
+  // 3. HTML GENERATE KARNA
+  let generatedHtml;
+  try {
+    generatedHtml = await generateHtmlWithGemini(currentTopic);
+  } catch (apiError) {
+    console.error("❌ Gemini API Error:", apiError.message);
+    process.exit(1);
+  }
+  
   const htmlPath = path.join(__dirname, '../hyperframes/index.html');
-  await fs.writeFile(htmlPath, sampleHtml);
+  await fs.writeFile(htmlPath, generatedHtml);
 
   // 4. VIDEO RENDER KARNA
   console.log("🎬 Hyperframes se Video render ho raha hai...");
