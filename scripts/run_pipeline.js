@@ -84,7 +84,7 @@ async function main() {
   // 5. INSTAGRAM PAR POST KARNA (Via Temporary Public URL)
   console.log("🚀 Video ko Public URL dene ke liye upload kar rahe hain...");
   try {
-    const hfDir = path.join(__dirname, '../hyperframes');
+    const hfDir = path.join(__dirname, '../hyperframes/renders'); // <-- UPDATED PATH
     const files = await fs.readdir(hfDir);
     const mp4File = files.find(f => f.endsWith('.mp4'));
     
