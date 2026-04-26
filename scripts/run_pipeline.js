@@ -8,9 +8,9 @@ const FormData = require('form-data');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { tavily } = require("@tavily/core");
 
-// Update credentials with the ones provided by the user directly
-const IG_ACCESS_TOKEN = "IGAAUf9OGQo7lBZAFpnVndOZADJfdERLOFJqUnpJUlF4ZA0V0WlcxakR5dDlfSV9pNEVUNV9PdXNIYmttVFozT29OMk85SDFSZAHEzTU9wZADUzQmdfQ25VQ1BobHJYX2ZA5em9FNGNoNGlxek5sbF9QRHRnOVNpSXdqTnRsSHpzSDFycwZDZD";
-const IG_USER_ID = "35101247759489657";
+// Update credentials from environment variables
+const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
+const IG_USER_ID = process.env.IG_USER_ID;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
 
