@@ -1,0 +1,42 @@
+name: Auto Post Instagram Reels
+
+on:
+  schedule:
+    - cron: '0 9 * * *' # Runs at 9:00 AM UTC every day
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  generate-and-post:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Clone Hyperframes
+        run: git clone https://github.com/heygen-com/hyperframes.git
+        
+      - name: Install Hyperframes dependencies
+        run: |
+          cd hyperframes
+          npm install
+
+      - name: Run Automation Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        run: node scripts/run_pipeline.js
