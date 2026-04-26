@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { execSync } = require('child_process');
 const axios = require('axios');
+const FormData = require('form-data');
 
 const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
 const IG_USER_ID = process.env.IG_USER_ID;
@@ -62,11 +63,59 @@ async function main() {
      process.exit(1); 
   }
 
-  // 5. INSTAGRAM PAR POST KARNA
-  // Video URL needs to be publicly accessible (e.g. upload to a temporary file host before sending to IG)
-  console.log("📱 Uploading to Instagram...", currentTopic);
-  // Simulating successful upload for now:
-  console.log("✅ Successfully posted to Instagram!");
+  // 5. INSTAGRAM PAR POST KARNA (Via Temporary Public URL)
+  console.log("🚀 Video ko Public URL dene ke liye upload kar rahe hain...");
+  try {
+    const hfDir = path.join(__dirname, '../hyperframes');
+    const files = await fs.readdir(hfDir);
+    const mp4File = files.find(f => f.endsWith('.mp4'));
+    
+    if (!mp4File) {
+        throw new Error("Rendered .mp4 file nahi mili!");
+    }
+
+    const formData = new FormData();
+    formData.append('reqtype', 'fileupload');
+    formData.append('userhash', '');
+    formData.append('fileToUpload', fs.createReadStream(path.join(hfDir, mp4File)));
+
+    const uploadRes = await axios.post('https://catbox.moe/user/api.php', formData, {
+        headers: formData.getHeaders()
+    });
+    const publicVideoUrl = uploadRes.data;
+    console.log("🔗 Public Video URL mil gaya:", publicVideoUrl);
+
+    console.log("📱 Uploading to Instagram...", currentTopic);
+    if (!IG_ACCESS_TOKEN || !IG_USER_ID) {
+      console.log("⚠️ Instagram Secrets nahi mile. Posting skip kar rahe hain.");
+    } else {
+      // Create Media Container
+      const containerRes = await axios.post(
+        `https://graph.facebook.com/v19.0/${IG_USER_ID}/media`,
+        {
+          video_url: publicVideoUrl,
+          caption: currentTopic,
+          media_type: 'REELS'
+        },
+        { params: { access_token: IG_ACCESS_TOKEN } }
+      );
+      const creationId = containerRes.data.id;
+      
+      console.log(`⏳ Media container created (ID: ${creationId}). Instagram processing ke liye 20 sec wait kar rahe hain...`);
+      await new Promise(r => setTimeout(r, 20000));
+
+      // Publish Media
+      const publishRes = await axios.post(
+        `https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`,
+        { creation_id: creationId },
+        { params: { access_token: IG_ACCESS_TOKEN } }
+      );
+      console.log("✅ Successfully posted to Instagram! Post ID:", publishRes.data.id);
+    }
+  } catch(error) {
+     console.error("❌ Instagram Upload Error:", error.response?.data || error.message);
+     process.exit(1);
+  }
 
   // 6. TOPIC KO LIST SE DELETE KARNA
   topics.shift(); // Pehla wala element nikal do
