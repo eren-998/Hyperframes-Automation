@@ -55,6 +55,13 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
         run: node scripts/run_pipeline.js
 
+      - name: Save Video to GitHub (Dikhane ke liye)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Generated-Video
+          path: hyperframes/renders/*.mp4
+
       - name: Commit and Push Updated Queue
         run: |
           git config --global user.name 'github-actions[bot]'
