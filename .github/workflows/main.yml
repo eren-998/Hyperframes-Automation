@@ -2,8 +2,12 @@ name: Auto Post Instagram Reels
 
 on:
   schedule:
-    - cron: '0 9 * * *' # Runs at 9:00 AM UTC every day
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+    # 9:00 AM UTC (Lagbhag 2:30 PM Indian Standard Time)
+    - cron: '0 9 * * *' 
+  workflow_dispatch: # Button dabakar manual run karne ke liye
+
+permissions:
+  contents: write # Update ki hui file ko wapas GitHub par save karne ki permission
 
 jobs:
   generate-and-post:
@@ -12,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # File modify karne ke liye token
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -40,3 +46,10 @@ jobs:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
         run: node scripts/run_pipeline.js
+
+      - name: Commit and Push Updated Queue
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add topics.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-removed processed topic from queue" && git push)
