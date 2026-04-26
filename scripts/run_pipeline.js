@@ -84,7 +84,7 @@ async function main() {
   // 5. INSTAGRAM PAR POST KARNA (Via Temporary Public URL)
   console.log("🚀 Video ko Public URL dene ke liye upload kar rahe hain...");
   try {
-    const hfDir = path.join(__dirname, '../hyperframes/renders'); // <-- UPDATED PATH
+    const hfDir = path.join(__dirname, '../hyperframes/renders');
     const files = await fs.readdir(hfDir);
     const mp4File = files.find(f => f.endsWith('.mp4'));
     
@@ -92,25 +92,30 @@ async function main() {
         throw new Error("Rendered .mp4 file nahi mili!");
     }
 
-    const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', fs.createReadStream(path.join(hfDir, mp4File)));
-
+    const mp4Path = path.join(hfDir, mp4File);
     let publicVideoUrl = '';
+
     try {
-        const uploadRes = await axios.post('https://catbox.moe/user/api.php', formData, {
+        console.log("🌐 Uploading to tmpfiles.org...");
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(mp4Path));
+        
+        const uploadRes = await axios.post('https://tmpfiles.org/api/v1/upload', formData, {
             headers: formData.getHeaders()
         });
-        publicVideoUrl = uploadRes.data;
-    } catch (catboxErr) {
-        console.log("⚠️ Catbox upload failed, trying fallback server (pomf.lain.la)...");
-        const fallbackData = new FormData();
-        fallbackData.append('files[]', fs.createReadStream(path.join(hfDir, mp4File)));
-        const fallbackRes = await axios.post('https://pomf.lain.la/upload.php', fallbackData, {
-            headers: fallbackData.getHeaders()
-        });
-        publicVideoUrl = fallbackRes.data.files[0].url;
+        
+        // tmpfiles.org returns a view URL (e.g. https://tmpfiles.org/123/video.mp4)
+        // Instagram needs the direct download URL (e.g. https://tmpfiles.org/dl/123/video.mp4)
+        const viewUrl = uploadRes.data.data.url;
+        publicVideoUrl = viewUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        
+    } catch (uploadErr) {
+        console.log("⚠️ tmpfiles.org fail ho gaya. Trying fallback (transfer.sh)...");
+        const fileBuffer = await fs.readFile(mp4Path);
+        const transferRes = await axios.put(`https://transfer.sh/${mp4File}`, fileBuffer);
+        publicVideoUrl = transferRes.data.trim();
     }
+
     console.log("🔗 Public Video URL mil gaya:", publicVideoUrl);
 
     console.log("📱 Uploading to Instagram...", currentTopic);
