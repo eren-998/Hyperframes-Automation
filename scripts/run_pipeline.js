@@ -36,18 +36,36 @@ async function main() {
   console.log("🤖 AI se HTML generate karwa rahe hain...");
   // In real life, use axios to call Gemini API with your system prompt & currentTopic here
   const sampleHtml = `<!DOCTYPE html>
-<html><head><style>
-  html, body { width: 100%; height: 100%; background: #F8FAFC; margin:0; display:flex; align-items:center; justify-content:center; }
-  #stage { width: 420px; height: 525px; outline: 2px solid rgba(66,133,244,0.5); }
-  .topbar { display:flex; padding: 10px; }
-</style></head><body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1080, height=1920" />
+  <meta data-composition-id="my-video" data-width="1080" data-height="1920" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <style>
+    html, body { width: 1080px; height: 1920px; background: #F8FAFC; margin:0; display:flex; align-items:center; justify-content:center; }
+    #stage { width: 1080px; height: 1920px; outline: 2px solid rgba(66,133,244,0.5); position:relative; overflow:hidden;}
+    .topbar { display:flex; padding: 40px; font-size: 40px; }
+    .clip { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; }
+  </style>
+</head>
+<body>
   <div id="stage">
-    <div class="topbar">
-      <span class="brand">@BigZip_Ai</span><span class="slide-tag">1 / 8</span>
+    <div id="el-title" class="clip" data-start="0" data-duration="5" data-track-index="0" style="display:flex; align-items:center; justify-content:center; flex-direction:column;">
+      <div class="topbar">
+        <span class="brand">@BigZip_Ai</span>
+      </div>
+      <h2 style="font-size: 60px;">${currentTopic}</h2>
     </div>
-    <h2>${currentTopic}</h2>
   </div>
-</body></html>`;
+  <script>
+    var tl = gsap.timeline({ paused: true });
+    tl.to("#el-title", { opacity: 1, duration: 0.5 }, 0);
+    window.__timelines = window.__timelines || {};
+    window.__timelines["my-video"] = tl;
+  </script>
+</body>
+</html>`;
   const htmlPath = path.join(__dirname, '../hyperframes/index.html');
   await fs.writeFile(htmlPath, sampleHtml);
 
