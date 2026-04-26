@@ -24,6 +24,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Install Dependencies
         run: npm ci
 
@@ -38,7 +46,7 @@ jobs:
       - name: Install Hyperframes dependencies
         run: |
           cd hyperframes
-          npm install
+          bun install
 
       - name: Run Automation Script
         env:

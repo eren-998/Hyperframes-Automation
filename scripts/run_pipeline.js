@@ -47,14 +47,13 @@ async function main() {
     <h2>${currentTopic}</h2>
   </div>
 </body></html>`;
-  const htmlPath = path.join(__dirname, '../hyperframes/input.html');
+  const htmlPath = path.join(__dirname, '../hyperframes/index.html');
   await fs.writeFile(htmlPath, sampleHtml);
 
   // 4. VIDEO RENDER KARNA
   console.log("🎬 Hyperframes se Video render ho raha hai...");
   try {
-     // NOTE: command depend karta hai hyperframes ke config par, mostly 'npm run build'
-     execSync('npm run build', { cwd: path.join(__dirname, '../hyperframes'), stdio: 'inherit' });
+     execSync('bunx hyperframes render', { cwd: path.join(__dirname, '../hyperframes'), stdio: 'inherit' });
      console.log("✅ Video Ban Gaya!");
   } catch (err) {
      console.error("❌ Error rendering video (Ensure Hyperframes command is correct)", err.message);
