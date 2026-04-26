@@ -94,13 +94,23 @@ async function main() {
 
     const formData = new FormData();
     formData.append('reqtype', 'fileupload');
-    formData.append('userhash', '');
     formData.append('fileToUpload', fs.createReadStream(path.join(hfDir, mp4File)));
 
-    const uploadRes = await axios.post('https://catbox.moe/user/api.php', formData, {
-        headers: formData.getHeaders()
-    });
-    const publicVideoUrl = uploadRes.data;
+    let publicVideoUrl = '';
+    try {
+        const uploadRes = await axios.post('https://catbox.moe/user/api.php', formData, {
+            headers: formData.getHeaders()
+        });
+        publicVideoUrl = uploadRes.data;
+    } catch (catboxErr) {
+        console.log("⚠️ Catbox upload failed, trying fallback server (pomf.lain.la)...");
+        const fallbackData = new FormData();
+        fallbackData.append('files[]', fs.createReadStream(path.join(hfDir, mp4File)));
+        const fallbackRes = await axios.post('https://pomf.lain.la/upload.php', fallbackData, {
+            headers: fallbackData.getHeaders()
+        });
+        publicVideoUrl = fallbackRes.data.files[0].url;
+    }
     console.log("🔗 Public Video URL mil gaya:", publicVideoUrl);
 
     console.log("📱 Uploading to Instagram...", currentTopic);
